@@ -29,13 +29,19 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
 /**
+ * Default implementation of {@link reactor.netty.resources.PooledConnectionProvider.MeterRegistrar}.
+ *
+ * Registers gauges for every metric in {@link reactor.pool.InstrumentedPool.PoolMetrics}.
+ *
+ * Every gauge uses id, poolName and remoteAddress as tags.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */
-final class PooledConnectionProviderMetrics {
+final class DefaultPooledConnectionProviderMeterRegistrar implements PooledConnectionProvider.MeterRegistrar {
 
-	static void registerMetrics(String poolName, String id, String remoteAddress,
-			InstrumentedPool.PoolMetrics metrics) {
+	 public void registerMetrics(String poolName, String id, String remoteAddress,
+								 InstrumentedPool.PoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
@@ -44,7 +50,7 @@ final class PooledConnectionProviderMetrics {
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 
-	private static void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {
+	private void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {
 		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
