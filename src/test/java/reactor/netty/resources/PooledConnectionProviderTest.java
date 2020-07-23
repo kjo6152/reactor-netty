@@ -29,12 +29,18 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFutureListener;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -71,8 +77,9 @@ import reactor.test.StepVerifier;
 
 import javax.net.ssl.SSLException;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.*;
+import static reactor.netty.Metrics.*;
 
 public class PooledConnectionProviderTest {
 
@@ -226,6 +233,109 @@ public class PooledConnectionProviderTest {
 			assertNotNull(sf);
 			assertThat(sf.get()).isNull();
 		}
+	}
+
+
+	@Test
+	public void testDefaultProviderMetrics() throws Exception {
+		MeterRegistry registry = new SimpleMeterRegistry();
+		Metrics.addRegistry(registry);
+
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.handle((req, res) -> res.header("Connection", "close")
+								.sendString(Mono.just("test")))
+						.bindNow();
+
+		AtomicBoolean metrics1 = new AtomicBoolean(false);
+		AtomicBoolean metrics2 = new AtomicBoolean(false);
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		ConnectionProvider provider = ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build();
+
+		String namePrefix = CONNECTION_PROVIDER_PREFIX + ".test";
+		PooledConnectionProvider fixed = (PooledConnectionProvider) provider;
+		AtomicReference<String[]> tags1 = new AtomicReference<>();
+		AtomicReference<String[]> tags2 = new AtomicReference<>();
+
+		HttpClient.create(fixed)
+				.port(server.port())
+				.doOnResponse((res, conn) -> {
+					conn.channel()
+							.closeFuture()
+							.addListener(f -> latch.countDown());
+
+					PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools.keySet().toArray()[0];
+					InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
+					String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), NAME, "test"};
+					tags1.set(tagsArr);
+
+					double totalConnections = getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
+					double activeConnections = getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
+					double idleConnections = getGaugeValue(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
+					double pendingConnections = getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
+
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics1.set(true);
+					}
+					tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort()};
+					tags2.set(tagsArr);
+
+					totalConnections = getGaugeValue(registry, namePrefix + TOTAL_CONNECTIONS, tagsArr);
+					activeConnections = getGaugeValue(registry, namePrefix + ACTIVE_CONNECTIONS, tagsArr);
+					idleConnections = getGaugeValue(registry, namePrefix + IDLE_CONNECTIONS, tagsArr);
+					pendingConnections = getGaugeValue(registry, namePrefix + PENDING_CONNECTIONS, tagsArr);
+
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics2.set(true);
+					}
+				})
+				.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block(Duration.ofSeconds(30));
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertTrue(metrics1.get());
+		String[] tagsArr = tags1.get();
+		assertNotNull(tagsArr);
+		assertEquals(0, getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
+
+		assertTrue(metrics2.get());
+		tagsArr = tags2.get();
+		assertNotNull(tagsArr);
+		assertEquals(0, getGaugeValue(registry,namePrefix + TOTAL_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,namePrefix + ACTIVE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,namePrefix + IDLE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(registry,namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
+
+		fixed.disposeLater()
+				.block(Duration.ofSeconds(30));
+
+		server.disposeNow();
+
+		Metrics.removeRegistry(registry);
+		registry.clear();
+		registry.close();
+	}
+
+
+	private double getGaugeValue(MeterRegistry registry, String name, String[] tags) {
+		Gauge gauge = registry.find(name).tags(tags).gauge();
+		double result = -1;
+		if (gauge != null) {
+			result = gauge.value();
+		}
+		return result;
 	}
 
 	@Test
