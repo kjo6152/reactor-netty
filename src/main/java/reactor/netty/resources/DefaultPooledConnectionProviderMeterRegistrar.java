@@ -31,7 +31,7 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 /**
  * Default implementation of {@link reactor.netty.resources.PooledConnectionProvider.MeterRegistrar}.
  *
- * Registers gauges for every metric in {@link reactor.pool.InstrumentedPool.PoolMetrics}.
+ * Registers gauges for every metric in {@link ConnectionPoolMetrics}.
  *
  * Every gauge uses id, poolName and remoteAddress as tags.
  *
@@ -42,7 +42,7 @@ final class DefaultPooledConnectionProviderMeterRegistrar implements PooledConne
 
 	@Override
 	 public void registerMetrics(String poolName, String id, String remoteAddress,
-								 InstrumentedPool.PoolMetrics metrics) {
+								 ConnectionPoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
@@ -51,23 +51,23 @@ final class DefaultPooledConnectionProviderMeterRegistrar implements PooledConne
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 
-	private void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {
-		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
+	private void registerMetricsInternal(String name, ConnectionPoolMetrics metrics, String... tags) {
+		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, ConnectionPoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, ConnectionPoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
+		Gauge.builder(name + IDLE_CONNECTIONS, metrics, ConnectionPoolMetrics::idleSize)
 		     .description("The number of the idle connections")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		Gauge.builder(name + PENDING_CONNECTIONS, metrics, ConnectionPoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(tags)
 		     .register(REGISTRY);

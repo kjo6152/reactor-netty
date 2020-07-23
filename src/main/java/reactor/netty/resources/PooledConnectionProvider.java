@@ -155,7 +155,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(remoteAddress),
-							newPool.metrics());
+							new ConnectionPoolMetrics.ConnectionPoolWrapper(newPool.metrics()));
 				}
 				return newPool;
 			});
@@ -754,7 +754,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	 */
 	public static interface MeterRegistrar {
 
-		void registerMetrics(String poolName, String id, String remoteAddress, InstrumentedPool.PoolMetrics metrics);
+		void registerMetrics(String poolName, String id, String remoteAddress, ConnectionPoolMetrics metrics);
 
 	}
 }
