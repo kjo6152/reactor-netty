@@ -40,6 +40,7 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  */
 final class DefaultPooledConnectionProviderMeterRegistrar implements PooledConnectionProvider.MeterRegistrar {
 
+	@Override
 	 public void registerMetrics(String poolName, String id, String remoteAddress,
 								 InstrumentedPool.PoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions

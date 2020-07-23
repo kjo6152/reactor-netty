@@ -589,6 +589,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @param metricsEnabled true enables metrics collection; false disables it
 		 * @param registrar the registrar used to define what meters are going to be collected.
 		 * @return {@literal this}
+		 * @since 0.9.11
 		 */
 		public final SPEC metrics(boolean metricsEnabled, PooledConnectionProvider.MeterRegistrar registrar) {
 			if (metricsEnabled) {
@@ -599,7 +600,7 @@ public interface ConnectionProvider extends Disposable {
 				}
 			}
 			this.metricsEnabled = metricsEnabled;
-			this.registrar = registrar;
+			this.registrar = Objects.requireNonNull(registrar);
 			return get();
 		}
 
