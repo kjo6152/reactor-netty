@@ -461,7 +461,7 @@ public interface ConnectionProvider extends Disposable {
 		boolean  metricsEnabled;
 		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
 				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
-		PooledConnectionProvider.MeterRegistrar registrar;
+		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -591,7 +591,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 * @since 0.9.11
 		 */
-		public final SPEC metrics(boolean metricsEnabled, Supplier<? extends PooledConnectionProvider.MeterRegistrar> registrar) {
+		public final SPEC metrics(boolean metricsEnabled, Supplier<? extends ConnectionProvider.MeterRegistrar> registrar) {
 			if (metricsEnabled) {
 				if (!Metrics.isInstrumentationAvailable()) {
 					throw new UnsupportedOperationException(
@@ -600,7 +600,7 @@ public interface ConnectionProvider extends Disposable {
 				}
 			}
 			this.metricsEnabled = metricsEnabled;
-			this.registrar = Objects.requireNonNull(registrar.get());
+			this.registrar = registrar;
 			return get();
 		}
 
@@ -645,7 +645,7 @@ public interface ConnectionProvider extends Disposable {
 
 
 	/**
-	 * A strategy to register which {@link io.micrometer.core.instrument.Meter} are collected by the {@link ConnectionProvider}.
+	 * A strategy to register which {@link io.micrometer.core.instrument.Meter} are collected in a particular connection pool.
 	 *
 	 * Default implementation of this interface is {@link DefaultPooledConnectionProviderMeterRegistrar}
 	 */

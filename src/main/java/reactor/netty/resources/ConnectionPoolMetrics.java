@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2011-Present VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package reactor.netty.resources;
 
 import reactor.pool.InstrumentedPool;
@@ -41,31 +56,11 @@ public interface ConnectionPoolMetrics {
      */
     int pendingAcquireSize();
 
-    /**
-     * Get the maximum number of live resources this pool will allow.
-     * <p>
-     * A pool might be unbounded, in which case this method returns {@link Integer#MAX_VALUE}.
-     *
-     * @return the maximum number of live resources that can be allocated by this pool
-     */
-    int getMaxAllocatedSize();
-
-    /**
-     * Get the maximum number of acquire this pool can queue in a pending state when no available
-     * resource is immediately handy (and the pool cannot allocate more resources).
-     * <p>
-     * A pool pending queue might be unbounded, in which case this method returns
-     * {@link Integer#MAX_VALUE}.
-     *
-     * @return the maximum number of pending acquire that can be enqueued by this pool
-     */
-    int getMaxPendingAcquireSize();
-
-    class ConnectionPoolWrapper implements ConnectionPoolMetrics {
+    class DelegatingConnectionPoolMetrics implements ConnectionPoolMetrics {
 
         private final InstrumentedPool.PoolMetrics delegate;
 
-        public ConnectionPoolWrapper(InstrumentedPool.PoolMetrics delegate) {
+        public DelegatingConnectionPoolMetrics(InstrumentedPool.PoolMetrics delegate) {
             this.delegate = delegate;
         }
 
@@ -87,16 +82,6 @@ public interface ConnectionPoolMetrics {
         @Override
         public int pendingAcquireSize() {
             return delegate.pendingAcquireSize();
-        }
-
-        @Override
-        public int getMaxAllocatedSize() {
-            return delegate.getMaxAllocatedSize();
-        }
-
-        @Override
-        public int getMaxPendingAcquireSize() {
-            return delegate.getMaxPendingAcquireSize();
         }
     }
 

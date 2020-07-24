@@ -37,8 +37,8 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  *
  * @author Violeta Georgieva
  * @since 0.9
- */
-final class DefaultPooledConnectionProviderMeterRegistrar implements PooledConnectionProvider.MeterRegistrar {
+q */
+final class DefaultPooledConnectionProviderMeterRegistrar implements ConnectionProvider.MeterRegistrar {
 
 	static final DefaultPooledConnectionProviderMeterRegistrar INSTANCE = new DefaultPooledConnectionProviderMeterRegistrar();
 

@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -80,7 +81,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final String                          name;
 	final Map<SocketAddress, PoolFactory> poolFactoryPerRemoteHost = new HashMap<>();
 	final PoolFactory                     defaultPoolFactory;
-	MeterRegistrar 				  		  registrar;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
@@ -88,7 +88,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		for(Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
 			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory(entry.getValue()));
 		}
-		this.registrar = builder.registrar;
 	}
 
 	@Override
@@ -152,16 +151,16 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
 				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
-					// in the case metrics are enable at the HttpClient level, the registrar has not been
-					// initialized through the ConnectionPoolSpec, we need to provide the default one
+					MeterRegistrar registrar = poolFactory.registrar.get();
 					if (null == registrar) {
+						// registrar is null when metrics are enabled on HttpClient level
 						registrar = DefaultPooledConnectionProviderMeterRegistrar.INSTANCE;
 					}
 
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(remoteAddress),
-							new ConnectionPoolMetrics.ConnectionPoolWrapper(newPool.metrics()));
+							new ConnectionPoolMetrics.DelegatingConnectionPoolMetrics(newPool.metrics()));
 				}
 				return newPool;
 			});
@@ -705,6 +704,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final boolean     metricsEnabled;
 		final Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
 				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		final Supplier<? extends MeterRegistrar> registrar;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
 			this.maxConnections = conf.maxConnections;
@@ -715,6 +715,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			this.maxLifeTime = conf.maxLifeTime != null ? conf.maxLifeTime.toMillis() : -1;
 			this.metricsEnabled = conf.metricsEnabled;
 			this.leasingStrategy = conf.leasingStrategy;
+			this.registrar = conf.registrar;
 		}
 
 		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator) {
