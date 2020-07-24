@@ -151,11 +151,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
 				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
-					MeterRegistrar registrar = poolFactory.registrar.get();
-					if (null == registrar) {
-						// registrar is null when metrics are enabled on HttpClient level
-						registrar = DefaultPooledConnectionProviderMeterRegistrar.INSTANCE;
-					}
+					MeterRegistrar registrar = poolFactory.registrar != null ?
+							// registrar is null when metrics are enabled on HttpClient level
+							poolFactory.registrar.get() : DefaultPooledConnectionProviderMeterRegistrar.INSTANCE;;
 
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
