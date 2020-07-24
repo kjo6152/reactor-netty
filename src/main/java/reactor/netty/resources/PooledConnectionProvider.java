@@ -80,7 +80,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final String                          name;
 	final Map<SocketAddress, PoolFactory> poolFactoryPerRemoteHost = new HashMap<>();
 	final PoolFactory                     defaultPoolFactory;
-	final MeterRegistrar 				  registrar;
+	MeterRegistrar 				  		  registrar;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
@@ -152,6 +152,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
 				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+					// in the case metrics are enable at the HttpClient level, the registrar has not been
+					// initialized through the ConnectionPoolSpec, we need to provide the default one
+					if (null == registrar) {
+						registrar = DefaultPooledConnectionProviderMeterRegistrar.INSTANCE;
+					}
+
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(remoteAddress),
@@ -746,15 +752,4 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				};
 	}
 
-
-	/**
-	 * A strategy to register which {@link io.micrometer.core.instrument.Meter} are collected by the {@link PooledConnectionProvider}.
-	 *
-	 * Default implementation of this interface is {@link DefaultPooledConnectionProviderMeterRegistrar}
-	 */
-	public static interface MeterRegistrar {
-
-		void registerMetrics(String poolName, String id, String remoteAddress, ConnectionPoolMetrics metrics);
-
-	}
 }

@@ -570,7 +570,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 */
 		public final SPEC metrics(boolean metricsEnabled) {
-			return this.metrics(metricsEnabled, new DefaultPooledConnectionProviderMeterRegistrar());
+			return this.metrics(metricsEnabled, () -> DefaultPooledConnectionProviderMeterRegistrar.INSTANCE);
 		}
 
 		/**
@@ -591,7 +591,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 * @since 0.9.11
 		 */
-		public final SPEC metrics(boolean metricsEnabled, PooledConnectionProvider.MeterRegistrar registrar) {
+		public final SPEC metrics(boolean metricsEnabled, Supplier<? extends PooledConnectionProvider.MeterRegistrar> registrar) {
 			if (metricsEnabled) {
 				if (!Metrics.isInstrumentationAvailable()) {
 					throw new UnsupportedOperationException(
@@ -600,7 +600,7 @@ public interface ConnectionProvider extends Disposable {
 				}
 			}
 			this.metricsEnabled = metricsEnabled;
-			this.registrar = Objects.requireNonNull(registrar);
+			this.registrar = Objects.requireNonNull(registrar.get());
 			return get();
 		}
 
@@ -641,5 +641,17 @@ public interface ConnectionProvider extends Disposable {
 	 * @since 0.9.5
 	 */
 	final class HostSpecificSpec extends ConnectionPoolSpec<HostSpecificSpec> {
+	}
+
+
+	/**
+	 * A strategy to register which {@link io.micrometer.core.instrument.Meter} are collected by the {@link ConnectionProvider}.
+	 *
+	 * Default implementation of this interface is {@link DefaultPooledConnectionProviderMeterRegistrar}
+	 */
+	interface MeterRegistrar {
+
+		void registerMetrics(String poolName, String id, String remoteAddress, ConnectionPoolMetrics metrics);
+
 	}
 }
