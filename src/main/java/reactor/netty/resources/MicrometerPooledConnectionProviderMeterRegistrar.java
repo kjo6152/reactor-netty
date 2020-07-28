@@ -16,7 +16,6 @@
 package reactor.netty.resources;
 
 import io.micrometer.core.instrument.Gauge;
-import reactor.pool.InstrumentedPool;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
@@ -37,12 +36,12 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  *
  * @author Violeta Georgieva
  * @since 0.9
-q */
-final class DefaultPooledConnectionProviderMeterRegistrar implements ConnectionProvider.MeterRegistrar {
+ */
+final class MicrometerPooledConnectionProviderMeterRegistrar implements ConnectionProvider.MeterRegistrar {
 
-	static final DefaultPooledConnectionProviderMeterRegistrar INSTANCE = new DefaultPooledConnectionProviderMeterRegistrar();
+	static final MicrometerPooledConnectionProviderMeterRegistrar INSTANCE = new MicrometerPooledConnectionProviderMeterRegistrar();
 
-	private DefaultPooledConnectionProviderMeterRegistrar() {}
+	private MicrometerPooledConnectionProviderMeterRegistrar() {}
 
 	@Override
 	public void registerMetrics(String poolName, String id, String remoteAddress,

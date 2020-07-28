@@ -153,7 +153,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
 					MeterRegistrar registrar = poolFactory.registrar != null ?
 							// registrar is null when metrics are enabled on HttpClient level
-							poolFactory.registrar.get() : DefaultPooledConnectionProviderMeterRegistrar.INSTANCE;;
+							poolFactory.registrar.get() : MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE;
 
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",

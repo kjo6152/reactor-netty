@@ -554,8 +554,8 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Whether to enable metrics to be collected and registered in Micrometer's
 		 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-		 * under the name {@link reactor.netty.Metrics#CONNECTION_PROVIDER_PREFIX}. Applications can
-		 * separately register their own
+		 * under the name {@link reactor.netty.Metrics#CONNECTION_PROVIDER_PREFIX}.
+		 * Applications can separately register their own
 		 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
 		 * For example, to put an upper bound on the number of tags produced:
 		 * <pre class="code">
@@ -563,35 +563,11 @@ public interface ConnectionProvider extends Disposable {
 		 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(CONNECTION_PROVIDER_PREFIX, 100, filter));
 		 * </pre>
 		 * <p>By default this is not enabled.
-		 *
-		 * If enabled, this method is providing a {@link DefaultPooledConnectionProviderMeterRegistrar} to define which meters are going to be collected.
 		 *
 		 * @param metricsEnabled true enables metrics collection; false disables it
 		 * @return {@literal this}
 		 */
 		public final SPEC metrics(boolean metricsEnabled) {
-			return this.metrics(metricsEnabled, () -> DefaultPooledConnectionProviderMeterRegistrar.INSTANCE);
-		}
-
-		/**
-		 * Whether to enable metrics to be collected and registered in Micrometer's
-		 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-		 * under the name {@link reactor.netty.Metrics#CONNECTION_PROVIDER_PREFIX}. Applications can
-		 * separately register their own
-		 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
-		 * For example, to put an upper bound on the number of tags produced:
-		 * <pre class="code">
-		 * MeterFilter filter = ... ;
-		 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(CONNECTION_PROVIDER_PREFIX, 100, filter));
-		 * </pre>
-		 * <p>By default this is not enabled.
-		 *
-		 * @param metricsEnabled true enables metrics collection; false disables it
-		 * @param registrar the registrar used to define what meters are going to be collected.
-		 * @return {@literal this}
-		 * @since 0.9.11
-		 */
-		public final SPEC metrics(boolean metricsEnabled, Supplier<? extends ConnectionProvider.MeterRegistrar> registrar) {
 			if (metricsEnabled) {
 				if (!Metrics.isInstrumentationAvailable()) {
 					throw new UnsupportedOperationException(
@@ -600,7 +576,22 @@ public interface ConnectionProvider extends Disposable {
 				}
 			}
 			this.metricsEnabled = metricsEnabled;
-			this.registrar = registrar;
+			return get();
+		}
+
+		/**
+		 * Specifies whether the metrics are enabled on the {@link ConnectionProvider}.
+		 * All generated metrics are provided to the specified registrar
+		 * which is only instantiated if metrics are being enabled.
+		 *
+		 * @param metricsEnabled true enables metrics collection; false disables it
+		 * @param registrar a supplier for the {@link MeterRegistrar}
+		 * @return {@literal this}
+		 * @since 0.9.11
+		 */
+		public final SPEC metrics(boolean metricsEnabled, Supplier<? extends ConnectionProvider.MeterRegistrar> registrar) {
+			this.metricsEnabled = metricsEnabled;
+			this.registrar = Objects.requireNonNull(registrar);
 			return get();
 		}
 
@@ -645,9 +636,9 @@ public interface ConnectionProvider extends Disposable {
 
 
 	/**
-	 * A strategy to register which {@link io.micrometer.core.instrument.Meter} are collected in a particular connection pool.
+	 * A strategy to register which metrics are collected in a particular connection pool.
 	 *
-	 * Default implementation of this interface is {@link DefaultPooledConnectionProviderMeterRegistrar}
+	 * Default implementation of this interface is {@link MicrometerPooledConnectionProviderMeterRegistrar}
 	 */
 	interface MeterRegistrar {
 
