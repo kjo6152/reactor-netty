@@ -31,7 +31,7 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
 /**
- * Default implementation of {@link reactor.netty.resources.PooledConnectionProvider.MeterRegistrar}.
+ * Default implementation of {@link reactor.netty.resources.ConnectionProvider.MeterRegistrar}.
  *
  * Registers gauges for every metric in {@link ConnectionPoolMetrics}.
  *

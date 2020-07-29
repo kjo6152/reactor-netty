@@ -50,123 +50,126 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  * @author Violeta Georgieva
  */
 public class PooledConnectionProviderDefaultMetricsTest {
-    private MeterRegistry registry;
+	private MeterRegistry registry;
 
-    @Before
-    public void setUp() {
-        registry = new SimpleMeterRegistry();
-        Metrics.addRegistry(registry);
-    }
+	@Before
+	public void setUp() {
+		registry = new SimpleMeterRegistry();
+		Metrics.addRegistry(registry);
+	}
 
-    @After
-    public void tearDown() {
-        Metrics.removeRegistry(registry);
-        registry.clear();
-        registry.close();
-    }
+	@After
+	public void tearDown() {
+		Metrics.removeRegistry(registry);
+		registry.clear();
+		registry.close();
+	}
 
-    @Test
-    public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
-        doTest(ConnectionProvider.create("test", 1), true);
-    }
+	@Test
+	public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
+		doTest(ConnectionProvider.create("test", 1), true);
+	}
 
-    @Test
-    public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
-        doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(),
-                false);
-    }
+	@Test
+	public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
+		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(),
+				false);
+	}
 
-    private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
-        DisposableServer server =
-                HttpServer.create()
-                        .port(0)
-                        .handle((req, res) -> res.header("Connection", "close")
-                                .sendString(Mono.just("test")))
-                        .bindNow();
+	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.handle((req, res) -> res.header("Connection", "close")
+								.sendString(Mono.just("test")))
+						.bindNow();
 
-        AtomicBoolean metrics1 = new AtomicBoolean(false);
-        AtomicBoolean metrics2 = new AtomicBoolean(false);
+		AtomicBoolean metrics1 = new AtomicBoolean(false);
+		AtomicBoolean metrics2 = new AtomicBoolean(false);
 
-        CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(1);
 
-        String namePrefix = CONNECTION_PROVIDER_PREFIX + ".test";
-        PooledConnectionProvider fixed = (PooledConnectionProvider) provider;
-        AtomicReference<String[]> tags1 = new AtomicReference<>();
-        AtomicReference<String[]> tags2 = new AtomicReference<>();
+		String namePrefix = CONNECTION_PROVIDER_PREFIX + ".test";
+		PooledConnectionProvider fixed = (PooledConnectionProvider) provider;
+		AtomicReference<String[]> tags1 = new AtomicReference<>();
+		AtomicReference<String[]> tags2 = new AtomicReference<>();
 
-        HttpClient.create(fixed)
-                .port(server.port())
-                .doOnResponse((res, conn) -> {
-                    conn.channel()
-                            .closeFuture()
-                            .addListener(f -> latch.countDown());
+		HttpClient.create(fixed)
+				.port(server.port())
+				.doOnResponse((res, conn) -> {
+					conn.channel()
+							.closeFuture()
+							.addListener(f -> latch.countDown());
 
-                    PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools.keySet().toArray()[0];
-                    InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
-                    String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), NAME, "test"};
-                    tags1.set(tagsArr);
+					PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools
+							.keySet().toArray()[0];
+					InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
+					String[] tagsArr = new String[] {ID, key.hashCode() + "", REMOTE_ADDRESS, sa
+							.getHostString() + ":" + sa.getPort(), NAME, "test"};
+					tags1.set(tagsArr);
 
-                    double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
-                    double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
-                    double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
-                    double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
+					double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
+					double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
+					double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
+					double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
 
-                    if (totalConnections == 1 && activeConnections == 1 &&
-                            idleConnections == 0 && pendingConnections == 0) {
-                        metrics1.set(true);
-                    }
-                    tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort()};
-                    tags2.set(tagsArr);
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics1.set(true);
+					}
+					tagsArr = new String[] {ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa
+							.getPort()};
+					tags2.set(tagsArr);
 
-                    totalConnections = getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr);
-                    activeConnections = getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr);
-                    idleConnections = getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr);
-                    pendingConnections = getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr);
+					totalConnections = getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr);
+					activeConnections = getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr);
+					idleConnections = getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr);
+					pendingConnections = getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr);
 
-                    if (totalConnections == 1 && activeConnections == 1 &&
-                            idleConnections == 0 && pendingConnections == 0) {
-                        metrics2.set(true);
-                    }
-                })
-                .metrics(clientMetricsEnabled, s -> s)
-                .get()
-                .uri("/")
-                .responseContent()
-                .aggregate()
-                .asString()
-                .block(Duration.ofSeconds(30));
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics2.set(true);
+					}
+				})
+				.metrics(clientMetricsEnabled, s -> s)
+				.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block(Duration.ofSeconds(30));
 
-        assertTrue(latch.await(30, TimeUnit.SECONDS));
-        assertTrue(metrics1.get());
-        String[] tagsArr = tags1.get();
-        assertNotNull(tagsArr);
-        assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertTrue(metrics1.get());
+		String[] tagsArr = tags1.get();
+		assertNotNull(tagsArr);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
 
-        assertTrue(metrics2.get());
-        tagsArr = tags2.get();
-        assertNotNull(tagsArr);
-        assertEquals(0, getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr), 0.0);
-        assertEquals(0, getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
+		assertTrue(metrics2.get());
+		tagsArr = tags2.get();
+		assertNotNull(tagsArr);
+		assertEquals(0, getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
 
-        fixed.disposeLater()
-                .block(Duration.ofSeconds(30));
+		fixed.disposeLater()
+				.block(Duration.ofSeconds(30));
 
-        server.disposeNow();
-    }
+		server.disposeNow();
+	}
 
 
-    private double getGaugeValue(String name, String[] tags) {
-        Gauge gauge = registry.find(name).tags(tags).gauge();
-        double result = -1;
-        if (gauge != null) {
-            result = gauge.value();
-        }
-        return result;
-    }
+	private double getGaugeValue(String name, String[] tags) {
+		Gauge gauge = registry.find(name).tags(tags).gauge();
+		double result = -1;
+		if (gauge != null) {
+			result = gauge.value();
+		}
+		return result;
+	}
 
 }

@@ -19,70 +19,70 @@ import reactor.pool.InstrumentedPool;
 
 public interface ConnectionPoolMetrics {
 
-    /**
-     * Measure the current number of resources that have been successfully
-     * acquired and are in active use.
-     *
-     * @return the number of acquired resources
-     */
-    int acquiredSize();
+	/**
+	 * Measure the current number of resources that have been successfully
+	 * acquired and are in active use.
+	 *
+	 * @return the number of acquired resources
+	 */
+	int acquiredSize();
 
-    /**
-     * Measure the current number of allocated resources in the pool, acquired
-     * or idle.
-     *
-     * @return the total number of allocated resources managed by the pool
-     */
-    int allocatedSize();
+	/**
+	 * Measure the current number of allocated resources in the pool, acquired
+	 * or idle.
+	 *
+	 * @return the total number of allocated resources managed by the pool
+	 */
+	int allocatedSize();
 
-    /**
-     * Measure the current number of idle resources in the pool.
-     * <p>
-     * Note that some resources might be lazily evicted when they're next considered
-     * for an incoming acquire call. Such resources would still count
-     * towards this method.
-     *
-     * @return the number of idle resources
-     */
-    int idleSize();
+	/**
+	 * Measure the current number of idle resources in the pool.
+	 * <p>
+	 * Note that some resources might be lazily evicted when they're next considered
+	 * for an incoming acquire call. Such resources would still count
+	 * towards this method.
+	 *
+	 * @return the number of idle resources
+	 */
+	int idleSize();
 
-    /**
-     * Measure the current number of "pending" acquire Monos in the  Pool.
-     * <p>
-     * An acquire is in the pending state when it is attempted at a point when no idle
-     * resource is available in the pool, and no new resource can be created.
-     *
-     * @return the number of pending acquire
-     */
-    int pendingAcquireSize();
+	/**
+	 * Measure the current number of "pending" acquire Monos in the  Pool.
+	 * <p>
+	 * An acquire is in the pending state when it is attempted at a point when no idle
+	 * resource is available in the pool, and no new resource can be created.
+	 *
+	 * @return the number of pending acquire
+	 */
+	int pendingAcquireSize();
 
-    class DelegatingConnectionPoolMetrics implements ConnectionPoolMetrics {
+	class DelegatingConnectionPoolMetrics implements ConnectionPoolMetrics {
 
-        private final InstrumentedPool.PoolMetrics delegate;
+		private final InstrumentedPool.PoolMetrics delegate;
 
-        public DelegatingConnectionPoolMetrics(InstrumentedPool.PoolMetrics delegate) {
-            this.delegate = delegate;
-        }
+		public DelegatingConnectionPoolMetrics(InstrumentedPool.PoolMetrics delegate) {
+			this.delegate = delegate;
+		}
 
-        @Override
-        public int acquiredSize() {
-            return delegate.acquiredSize();
-        }
+		@Override
+		public int acquiredSize() {
+			return delegate.acquiredSize();
+		}
 
-        @Override
-        public int allocatedSize() {
-            return delegate.allocatedSize();
-        }
+		@Override
+		public int allocatedSize() {
+			return delegate.allocatedSize();
+		}
 
-        @Override
-        public int idleSize() {
-            return delegate.idleSize();
-        }
+		@Override
+		public int idleSize() {
+			return delegate.idleSize();
+		}
 
-        @Override
-        public int pendingAcquireSize() {
-            return delegate.pendingAcquireSize();
-        }
-    }
+		@Override
+		public int pendingAcquireSize() {
+			return delegate.pendingAcquireSize();
+		}
+	}
 
 }
