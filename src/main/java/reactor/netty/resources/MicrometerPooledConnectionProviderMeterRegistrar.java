@@ -15,7 +15,10 @@
  */
 package reactor.netty.resources;
 
+import java.net.SocketAddress;
+
 import io.micrometer.core.instrument.Gauge;
+import reactor.netty.Metrics;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
@@ -44,13 +47,14 @@ final class MicrometerPooledConnectionProviderMeterRegistrar implements Connecti
 	private MicrometerPooledConnectionProviderMeterRegistrar() {}
 
 	@Override
-	public void registerMetrics(String poolName, String id, String remoteAddress,
+	public void registerMetrics(String poolName, String id, SocketAddress remoteAddress,
 								 ConnectionPoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions
-		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
+		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
 
-		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, NAME, poolName};
+		tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 

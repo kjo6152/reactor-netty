@@ -173,7 +173,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					poolMetrics.put(poolKey, metrics);
 					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
-							Metrics.formatSocketAddress(remoteAddress),
+							remoteAddress,
 							metrics);
 				}
 				return newPool;

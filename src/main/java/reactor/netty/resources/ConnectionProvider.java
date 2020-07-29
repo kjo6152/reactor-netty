@@ -642,7 +642,7 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	interface MeterRegistrar {
 
-		void registerMetrics(String poolName, String id, String remoteAddress, ConnectionPoolMetrics metrics);
+		void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics);
 
 	}
 }
