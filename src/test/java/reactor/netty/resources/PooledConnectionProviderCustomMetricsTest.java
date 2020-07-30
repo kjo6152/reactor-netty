@@ -15,11 +15,16 @@
  */
 package reactor.netty.resources;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -27,47 +32,50 @@ import static org.junit.Assert.assertTrue;
 
 public class PooledConnectionProviderCustomMetricsTest {
 
+	private Bootstrap bootstrap;
+
+	private ConnectionProvider pool;
+
+	@Before
+	public void setUp() {
+		bootstrap = new Bootstrap().remoteAddress("localhost", 0)
+				.channelFactory(NioSocketChannel::new)
+				.group(new NioEventLoopGroup(2));
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		bootstrap.config().group().shutdownGracefully().get(10L, TimeUnit.SECONDS);
+		pool.dispose();
+	}
+
+
 	@Test
-	public void customRegistrarIsUsed() {
+	public void customRegistrarIsUsed() throws Exception {
 		AtomicBoolean used = new AtomicBoolean();
-		ConnectionProvider pool = ConnectionProvider.builder("test")
-				.metrics(true, () -> (a, b, c, d) -> used.set(true))
-				.build();
 
-		Bootstrap bootstrap = new Bootstrap().remoteAddress("localhost", 0)
-			.channelFactory(NioSocketChannel::new)
-			.group(new NioEventLoopGroup(2));
-
-
-		try {
-			pool.acquire(bootstrap).block();
-		}
-		catch (Exception ignored) {
-		}
-
+		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
 		assertTrue(used.get());
-
 	}
 
 	@Test
 	public void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
 		AtomicBoolean used = new AtomicBoolean();
-		ConnectionProvider pool = ConnectionProvider.builder("test")
-				.metrics(false, () -> {used.set(true); return null;})
+
+		triggerAcquisition(false, () -> {used.set(true); return null;});
+		assertFalse(used.get());
+	}
+
+	private void triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
+		pool = ConnectionProvider.builder("test")
+				.metrics(metricsEnabled, registrarSupplier)
 				.build();
 
-		Bootstrap bootstrap = new Bootstrap().remoteAddress("localhost", 0)
-				.channelFactory(NioSocketChannel::new)
-				.group(new NioEventLoopGroup(2));
-
-
 		try {
-			pool.acquire(bootstrap).block();
+			pool.acquire(bootstrap).block(Duration.ofSeconds(10L));
 		}
-		catch (Exception ignored) {
+		catch (Exception expected) {
 		}
-
-		assertFalse(used.get());
-
 	}
+
 }
