@@ -51,7 +51,7 @@ public class PooledConnectionProviderCustomMetricsTest {
 
 
 	@Test
-	public void customRegistrarIsUsed() throws Exception {
+	public void customRegistrarIsUsed() {
 		AtomicBoolean used = new AtomicBoolean();
 
 		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
